@@ -56,6 +56,13 @@ Demo login: `demo@collegepick.dev` / `password123`. The component kit is at
 | `pnpm db:migrate` / `db:deploy` | Create and apply migrations (dev) / apply only (prod) |
 | `pnpm db:seed` | Wipe and reseed; same data every run |
 | `pnpm db:studio` | Browse the database in Prisma Studio |
+| `pnpm smoke` | API checks with curl (app must be running) |
+| `pnpm a11y` | axe accessibility audit of every page (app must be running) |
+
+**Images fail locally with "unable to verify the first certificate"?** Your network is
+inspecting HTTPS with a certificate Node doesn't trust, so the image optimizer can't fetch
+Unsplash. Set `NEXT_IMAGE_UNOPTIMIZED=1` in `.env` (local only) and rebuild; the browser then
+loads images directly.
 | `pnpm screenshot [/path ...]` | Full-page screenshots at 375, 768 and 1280px into `.screenshots/` (app must be running) |
 
 ## Design system
@@ -278,10 +285,33 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
 - **One validation message when there's one problem.** A 400 with a single zod issue uses that
   issue as the message ("Each college can only appear once in a comparison."), so the UI can
   show the API's words directly.
+- **Strong shades for text on tints.** `--accent` on `--accent-soft` (and good/warn on their
+  10% tints) measure just under 4.5:1, which axe flagged. Text on a tint uses a derived darker
+  shade (`color-mix` of the token with `--ink`), so the palette stays the ten tokens.
+- **Filter sidebar from 1024px, drawer below.** At 768px a 280px sidebar leaves ~165px cards
+  whose fee ranges wrap, so tablets get the drawer too, and the grid stays at two columns
+  until 1280px.
+- **Animation code loads after first paint.** `LazyMotion` pulls framer-motion's features in
+  asynchronously; every animation follows a user action, so nothing is lost.
 - **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
   readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
   on Vercel.
+
+## Quality checks
+
+| Check | Command | Result |
+|---|---|---|
+| API contract and edge cases | `pnpm smoke` | 107 checks passing |
+| Accessibility (axe, WCAG 2.1 AA) | `pnpm a11y` | 0 violations on 12 pages at 375 and 1280px, logged in and out |
+| Lighthouse, listing page, desktop | `lighthouse --preset=desktop` | Performance 98 |
+| Lighthouse, listing page, mobile | `lighthouse` | Accessibility 98, Best practices 96, SEO 91, Performance 60–71 |
+| Reduced motion | manual script | Compare bar and results fade render at rest immediately; no other CSS animation exists |
+
+The mobile performance score was measured on a slow dev laptop (Lighthouse benchmark index
+1067) under Lighthouse's 4× CPU throttle. Layout shift is 0; the cost is hydrating the
+interactive listing (filters plus 12 cards with save/compare state). The fix is in
+"What's next": render the first page of cards as server components.
 
 ## Edge cases
 

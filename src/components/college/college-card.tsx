@@ -28,7 +28,6 @@ export function CollegeCard({ college, priority = false, className }: CollegeCar
     <article
       className={cn(
         "relative flex flex-col overflow-hidden rounded-card border border-line bg-surface hover:border-ink-muted",
-        "has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-accent",
         className,
       )}
     >
@@ -52,7 +51,11 @@ export function CollegeCard({ college, priority = false, className }: CollegeCar
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex flex-col gap-0.5">
           <h3 className="text-lg leading-snug">
-            <Link href={`/colleges/${college.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none">
+            {/* The stretched ::after covers the card and carries the focus ring, card-shaped. */}
+            <Link
+              href={`/colleges/${college.slug}`}
+              className="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent"
+            >
               {college.name}
             </Link>
           </h3>

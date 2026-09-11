@@ -31,7 +31,8 @@ export function PlacementChart({ placement }: { placement: PlacementData }) {
               <LabelList
                 dataKey="value"
                 position="top"
-                formatter={(value) => formatLPA(Number(value))}
+                // Plain numbers: the caption already says "lakhs per year", and "LPA" wraps on phones.
+                formatter={(value) => String(value)}
                 style={{ fill: tokens.ink, fontSize: 14, fontWeight: 600 }}
               />
             </Bar>

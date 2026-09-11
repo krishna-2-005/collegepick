@@ -4,8 +4,8 @@ import { CollegeCardSkeleton, CollegeGrid } from "./college-card";
 /** Mirrors the listing layout: filter column plus a grid of card skeletons. */
 export function ListingSkeleton() {
   return (
-    <div className="grid gap-8 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr]" aria-busy="true" aria-label="Loading colleges">
-      <div className="hidden flex-col gap-6 md:flex">
+    <div className="grid gap-8 lg:grid-cols-[280px_1fr]" aria-busy="true" aria-label="Loading colleges">
+      <div className="hidden flex-col gap-6 lg:flex">
         <Skeleton className="h-11" />
         {Array.from({ length: 5 }, (_, index) => (
           <div key={index} className="flex flex-col gap-3 border-t border-line pt-5">
@@ -23,7 +23,7 @@ export function ListingSkeleton() {
           <Skeleton className="h-9 w-40" />
           <Skeleton className="h-5 w-28" />
         </div>
-        <CollegeGrid>
+        <CollegeGrid className="lg:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
             <CollegeCardSkeleton key={index} />
           ))}

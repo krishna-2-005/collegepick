@@ -160,7 +160,13 @@ export default async function CollegePage({ params }: Props) {
           </h2>
           <span className="text-ink-muted">{college.courses.length} programmes</span>
         </div>
-        <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        {/* Focusable so keyboard users can scroll the table sideways on small screens. */}
+        <div
+          role="region"
+          aria-label="Courses table"
+          tabIndex={0}
+          className="overflow-x-auto rounded-card border border-line bg-surface"
+        >
           <table className="w-full min-w-[640px] text-left text-[0.9375rem]">
             <caption className="sr-only">Courses offered at {college.name}</caption>
             <thead className="border-b border-line text-sm text-ink-muted">

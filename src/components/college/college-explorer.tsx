@@ -44,8 +44,8 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
     total === undefined ? "Loading colleges…" : `${formatCount(total)} ${total === 1 ? "college" : "colleges"}`;
 
   return (
-    <div className="grid gap-8 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr]">
-      <aside aria-label="Filters" className="hidden md:block">
+    <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <aside aria-label="Filters" className="hidden lg:block">
         <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 pb-6">
           <FilterPanel options={options} state={filterState} />
         </div>
@@ -64,7 +64,7 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
           <div className="flex w-full items-end gap-2 sm:w-auto">
             <Button
               variant="secondary"
-              className="flex-1 md:hidden"
+              className="flex-1 lg:hidden"
               icon={<SlidersHorizontal aria-hidden className="size-4.5" />}
               onClick={() => setDrawerOpen(true)}
             >
@@ -115,7 +115,7 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
             }
           />
         ) : colleges.length === 0 ? (
-          <CollegeGrid>
+          <CollegeGrid className="lg:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }, (_, index) => (
               <CollegeCardSkeleton key={index} />
             ))}
@@ -129,7 +129,7 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
             transition={{ duration: 0.15, ease: "easeOut" }}
             aria-busy={updating}
           >
-            <CollegeGrid>
+            <CollegeGrid className="lg:grid-cols-2 xl:grid-cols-3">
               {colleges.map((college, index) => (
                 <CollegeCard key={college.id} college={college} priority={index < 3} />
               ))}

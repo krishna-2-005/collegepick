@@ -8,7 +8,8 @@ const base =
   "inline-flex h-10 items-center gap-1.5 rounded-control border px-3 text-sm font-medium whitespace-nowrap md:h-8";
 
 const idle = "border-line bg-surface text-ink hover:border-ink-muted";
-const active = "border-accent bg-accent-soft text-accent";
+// accent-strong: plain accent text on accent-soft falls just short of 4.5:1.
+const active = "border-accent bg-accent-soft text-accent-strong";
 
 type CommonProps = {
   children: ReactNode;
@@ -74,7 +75,7 @@ export function RemovableChip({ children, onRemove, className }: RemovableChipPr
 
 function ChipCount({ count, selected = false }: { count: number; selected?: boolean }) {
   return (
-    <span className={cn("font-normal", selected ? "text-accent/80" : "text-ink-muted")}>
+    <span className={cn("font-normal", selected ? "text-accent-strong" : "text-ink-muted")}>
       {formatCount(count)}
     </span>
   );

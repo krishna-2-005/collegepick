@@ -5,9 +5,10 @@ export type BadgeTone = "neutral" | "accent" | "good" | "warn" | "solid";
 
 const tones: Record<BadgeTone, string> = {
   neutral: "border border-line bg-bg text-ink-muted",
-  accent: "bg-accent-soft text-accent",
-  good: "bg-good/10 text-good",
-  warn: "bg-warn/10 text-warn",
+  accent: "bg-accent-soft text-accent-strong",
+  // Strong shades: the base tokens on their own 10% tint fall just under 4.5:1.
+  good: "bg-good/10 text-good-strong",
+  warn: "bg-warn/10 text-warn-strong",
   solid: "bg-accent text-white",
 };
 

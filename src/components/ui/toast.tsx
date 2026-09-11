@@ -30,7 +30,7 @@ export function Toaster() {
           description: "text-sm text-ink-muted",
           icon: "mt-0.5",
           actionButton:
-            "ml-auto h-9 shrink-0 rounded-control px-3 text-sm font-medium text-accent hover:bg-accent-soft",
+            "ml-auto h-9 shrink-0 rounded-control px-3 text-sm font-medium text-accent hover:bg-accent-soft hover:text-accent-strong",
         },
       }}
     />

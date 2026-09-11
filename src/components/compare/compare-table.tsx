@@ -157,7 +157,7 @@ export function CompareTable({ colleges, onRemove, onAdd }: CompareTableProps) {
                 <button
                   type="button"
                   onClick={onAdd}
-                  className="flex h-full min-h-16 w-full items-center justify-center gap-2 rounded-card border border-line text-sm font-medium text-accent hover:border-accent hover:bg-accent-soft"
+                  className="flex h-full min-h-16 w-full items-center justify-center gap-2 rounded-card border border-line text-sm font-medium text-accent hover:border-accent hover:bg-accent-soft hover:text-accent-strong"
                 >
                   <Plus aria-hidden className="size-4.5" />
                   Add college

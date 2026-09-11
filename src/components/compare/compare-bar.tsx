@@ -54,7 +54,7 @@ export function CompareBar() {
                     transition={pop}
                     className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-bg py-1 pr-1 pl-1 md:pr-1.5"
                   >
-                    <span className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-xs font-semibold text-accent">
+                    <span className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-xs font-semibold text-accent-strong">
                       {item.imageUrl ? (
                         <Image src={item.imageUrl} alt="" fill sizes="32px" className="object-cover" />
                       ) : (

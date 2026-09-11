@@ -15,9 +15,10 @@ import { Input } from "@/components/ui/input";
 import { RangeSlider, type Range } from "@/components/ui/range-slider";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StarRating, StarRatingInput } from "@/components/ui/star-rating";
+import { StarRating, StarRatingInput, StarRow } from "@/components/ui/star-rating";
 import { StatBlock } from "@/components/ui/stat-block";
 import { Tabs } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { formatFeeRange, formatINR, formatLPA, formatPercent } from "@/lib/format";
@@ -273,8 +274,14 @@ export function Playground() {
         </div>
       </Section>
 
-      <Section title="StarRating input" note="Five native radios, so arrow keys change the rating.">
-        <StarRatingInput label="Your rating" value={rating} onValueChange={setRating} />
+      <Section title="StarRating input, StarRow, Textarea" note="Five native radios, so arrow keys change the rating.">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <StarRatingInput label="Your rating" value={rating} onValueChange={setRating} />
+            <StarRow value={4} />
+          </div>
+          <Textarea label="Your review" hint="At least 30 characters." placeholder="Faculty, placements, campus life…" />
+        </div>
       </Section>
 
       <Section title="Skeleton" note="Static, same size as the card it stands in for, so nothing shifts when data arrives.">

@@ -16,6 +16,7 @@
   /* Pressed/hover shades derived from the tokens above, not new colors. */
   --accent-strong: color-mix(in srgb, var(--accent) 84%, var(--ink));
   --warn-strong: color-mix(in srgb, var(--warn) 84%, var(--ink));
+  --good-strong: color-mix(in srgb, var(--good) 84%, var(--ink));
 
   /* The only shadow in the app: sticky compare bar and dialogs. */
   --shadow-float: 0 8px 32px rgba(20, 33, 61, 0.12);
@@ -69,6 +70,7 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-strong: var(--accent-strong);
   --color-good: var(--good);
+  --color-good-strong: var(--good-strong);
   --color-warn: var(--warn);
   --color-warn-strong: var(--warn-strong);
   --color-gold: var(--gold);

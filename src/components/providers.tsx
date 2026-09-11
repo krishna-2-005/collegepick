@@ -1,12 +1,14 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LazyMotion, domAnimation } from "framer-motion";
+import { LazyMotion } from "framer-motion";
 import { SessionProvider } from "next-auth/react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useEffect, useState, type ReactNode } from "react";
 import { ApiClientError } from "@/lib/api-client";
 import { useCompareStore } from "@/store/compare";
+
+const loadMotionFeatures = () => import("@/lib/motion-features").then((mod) => mod.default);
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -31,8 +33,8 @@ export function Providers({ children }: { children: ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <NuqsAdapter>
-          {/* LazyMotion keeps framer-motion's bundle to the DOM features the three animations use. */}
-          <LazyMotion features={domAnimation} strict>
+          {/* Animation features load after first paint; the three motions all follow a user action. */}
+          <LazyMotion features={loadMotionFeatures} strict>
             {children}
           </LazyMotion>
         </NuqsAdapter>

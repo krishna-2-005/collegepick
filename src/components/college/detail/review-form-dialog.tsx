@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { StarRatingInput } from "@/components/ui/star-rating";
@@ -67,9 +68,7 @@ export function ReviewFormDialog({
     >
       <form id="review-form" onSubmit={submit} noValidate className="flex flex-col gap-5">
         {formError ? (
-          <p role="alert" className="rounded-control border border-warn/30 bg-warn/10 px-3 py-2.5 text-sm text-warn">
-            {formError}
-          </p>
+          <FormAlert>{formError}</FormAlert>
         ) : null}
         <StarRatingInput label="Your rating" value={draft.rating} onValueChange={(rating) => update({ rating })} error={errors.rating} />
         <Input

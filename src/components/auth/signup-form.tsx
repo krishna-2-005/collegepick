@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import type { ApiResponse } from "@/lib/api-response";
@@ -78,9 +79,7 @@ export function SignupForm({ next }: { next: string }) {
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
       {formError ? (
-        <p role="alert" className="rounded-control border border-warn/30 bg-warn/10 px-3 py-2.5 text-sm text-warn">
-          {formError}
-        </p>
+        <FormAlert>{formError}</FormAlert>
       ) : null}
       <Input
         label="Name"

@@ -22,6 +22,7 @@ export function Navbar() {
   const links = [
     { path: "/colleges", href: "/colleges", label: "Colleges" },
     { path: "/compare", href: compareHref(compareItems), label: "Compare" },
+    { path: "/predict", href: "/predict", label: "Predict" },
     { path: "/saved", href: "/saved", label: "Saved" },
   ];
   const { data: session, status } = useSession();

@@ -14,6 +14,8 @@ const publicPages = [
   `/colleges/${slugs[0]}`,
   `/compare?ids=${slugs.join(",")}`,
   "/compare",
+  "/predict",
+  "/predict?exam=JEE_MAIN&rank=40000",
   "/login",
   "/signup",
   "/colleges/no-such-college",

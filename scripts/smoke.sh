@@ -201,6 +201,18 @@ check "delete comparison" 200 DELETE "/api/saved/comparisons?id=$CMP_ID"
 check "delete again" 404 DELETE "/api/saved/comparisons?id=$CMP_ID"
 logout
 
+echo "Predictor"
+check "predict JEE Main" 200 GET "/api/predict?exam=JEE_MAIN&rank=40000"
+assert "bands respect the rank thresholds" "b.data.results.length > 0 && b.data.results.every(r => (r.band === 'reach' && r.closingRank >= 32000 && r.closingRank < 40000) || (r.band === 'good' && r.closingRank >= 40000 && r.closingRank < 52000) || (r.band === 'safe' && r.closingRank >= 52000))"
+assert "counts cover the returned rows" "['reach','good','safe'].every(k => b.data.counts[k] >= b.data.results.filter(r => r.band === k).length)"
+check "predict with state" 200 GET "/api/predict?exam=JEE_MAIN&rank=40000&state=Karnataka"
+assert "state filter applied" "b.data.results.every(r => r.college.state === 'Karnataka')"
+check "predict blank state is ignored" 200 GET "/api/predict?exam=NEET&rank=5000&state="
+check "predict missing exam" 400 GET "/api/predict?rank=100"
+check "predict unknown exam" 400 GET "/api/predict?exam=SAT&rank=100"
+check "predict rank 0" 400 GET "/api/predict?exam=CAT&rank=0"
+check "predict rank not a number" 400 GET "/api/predict?exam=CAT&rank=abc"
+
 echo "Concurrent reviews keep the rating consistent"
 JARS=()
 for n in 1 2 3 4 5; do

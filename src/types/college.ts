@@ -70,6 +70,21 @@ export type SavedComparisonData = {
   colleges: CollegeSummary[];
 };
 
+export type PredictBand = "reach" | "good" | "safe";
+
+export type PredictResult = {
+  college: CollegeCardData;
+  closingRank: number;
+  year: number;
+  band: PredictBand;
+};
+
+export type PredictResponse = {
+  results: PredictResult[];
+  /** Matches per band, including any beyond the returned rows. */
+  counts: Record<PredictBand, number>;
+};
+
 export type FilterOptions = {
   states: { value: string; count: number }[];
   cities: { value: string; state: string; count: number }[];

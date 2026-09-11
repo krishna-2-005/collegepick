@@ -89,6 +89,7 @@ reviews change ratings. `pnpm smoke` walks all 200 rows in every sort to prove i
 | `/colleges/[slug]` | ISR on first visit, revalidated on review | Cacheable, correct 404 status |
 | `/compare` | Dynamic | Shared links render with data for previews |
 | `/saved` | Dynamic, protected | Per user |
+| `/predict` | Static shell, revalidated hourly | Results come from `/api/predict` for the URL's exam and rank |
 | `/api/filters` | Static, revalidated hourly | Changes only with new colleges |
 
 ## Auth

@@ -5,6 +5,7 @@ import { Logo } from "./logo";
 const links = [
   { href: "/colleges", label: "Colleges" },
   { href: "/compare", label: "Compare" },
+  { href: "/predict", label: "Predict" },
   { href: "/saved", label: "Saved" },
 ];
 

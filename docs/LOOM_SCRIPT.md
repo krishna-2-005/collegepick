@@ -19,6 +19,8 @@ search and filters, a college page, side-by-side compare, and accounts with save
 5. Compare page: best value per row in green, radar chart, Share link, Save comparison.
 6. Saved page: saved colleges and the saved comparison. Resize to phone width: filters in a
    drawer, compare table scrolls with the first column pinned.
+7. Predictor (stretch): JEE Main, rank 40,000 → reach, good chance and safe, each row showing
+   the closing rank and how far it is from yours.
 
 ## 2:00 Architecture and request flow
 
@@ -69,4 +71,5 @@ In the network tab:
 - The rate limiter is in-memory, so it's per instance; next step is Upstash.
 - Mobile Lighthouse performance on the listing is held back by hydration; next step is
   rendering the first page of cards as server components.
-- Then the predictor: exam and rank to recommended colleges, from the seeded cutoffs.
+- The predictor uses one closing rank per exam; real use needs category, quota, round and
+  several years of history.

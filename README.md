@@ -36,6 +36,9 @@ reviews on one page, compare up to three colleges side by side, and save what yo
    row marked, plus a radar chart. Copy the link or save the comparison.
 4. **Accounts and saved items.** Email and password sign-up and login, save colleges with the
    heart, save comparisons, and find both on `/saved`.
+5. **Predictor (stretch).** `/predict`: pick an exam (JEE Main, JEE Advanced, NEET, CAT, GATE),
+   enter your rank, optionally a state, and see colleges grouped as reach, good chance and safe
+   from the 2025 closing ranks, with the gap to your rank on each row.
 
 Screenshots at 375, 768 and 1280px go in [`docs/screenshots/`](docs/screenshots/)
 (`pnpm screenshot`). Architecture notes are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
@@ -231,6 +234,7 @@ Prisma errors never reach the client.
 | GET · POST · DELETE | `/api/saved/comparisons` | Auth. POST `{ slugs, name? }`; the same set in any order returns the existing one (200). `DELETE ?id=` only deletes your own (404 otherwise). |
 | POST | `/api/auth/signup` | `{ name, email, password }` → 201 `{ id, name, email }`. 409 if the email exists (case-insensitive). Password 8–72 chars. The hash is never returned. |
 | * | `/api/auth/*` | Auth.js: `csrf`, `callback/credentials`, `session`, `signout`. |
+| GET | `/api/predict?exam&rank&state` | Colleges by band: reach (closing rank 0.8–1× yours), good (1–1.3×), safe (≥1.3×). Up to 18 per band, most competitive first, with full counts. |
 | GET | `/api/filters` | States and cities with counts, degrees, exams, ownership, fee bounds. Static, revalidated hourly. |
 
 `pnpm smoke` runs curl checks against a running app, covering happy paths and the error
@@ -334,6 +338,9 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
   until 1280px.
 - **Animation code loads after first paint.** `LazyMotion` pulls framer-motion's features in
   asynchronously; every animation follows a user action, so nothing is lost.
+- **Predictor bands are ratios of your rank**, not fixed gaps: 5,000 ranks is a lot at rank
+  2,000 and nothing at rank 200,000. It was built before deploy (the plan puts it after)
+  because deploy is waiting on hosting credentials.
 - **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
   readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
@@ -343,8 +350,8 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
 
 | Check | Command | Result |
 |---|---|---|
-| API contract and edge cases | `pnpm smoke` | 107 checks passing |
-| Accessibility (axe, WCAG 2.1 AA) | `pnpm a11y` | 0 violations on 12 pages at 375 and 1280px, logged in and out |
+| API contract and edge cases | `pnpm smoke` | 117 checks passing |
+| Accessibility (axe, WCAG 2.1 AA) | `pnpm a11y` | 0 violations on 14 pages at 375 and 1280px, logged in and out |
 | Lighthouse, listing page, desktop | `lighthouse --preset=desktop` | Performance 98 |
 | Lighthouse, listing page, mobile | `lighthouse` | Accessibility 98, Best practices 96, SEO 91, Performance 60–71 |
 | Reduced motion | manual script | Compare bar and results fade render at rest immediately; no other CSS animation exists |
@@ -356,7 +363,7 @@ interactive listing (filters plus 12 cards with save/compare state). The fix is 
 
 ## Edge cases
 
-Each one is covered by `pnpm smoke` (107 checks) unless marked UI.
+Each one is covered by `pnpm smoke` (117 checks) unless marked UI.
 
 | Case | Behavior |
 |---|---|
@@ -410,4 +417,5 @@ explicitly (step 2), not during the build, so a failed deploy never half-migrate
 - **Revocable sessions:** a `tokenVersion` on the user, checked in the JWT callback.
 - **Shared rate limiting** with Upstash Redis so the limit holds across serverless instances.
 - **Search quality:** a `pg_trgm` index for typo-tolerant name search as the dataset grows.
-- **Predictor** (`/predict`): exam and rank in, colleges whose seeded closing ranks you clear.
+- **Predictor accuracy:** closing ranks by category, quota and round, and several years of
+  history, instead of one 2025 number per exam.

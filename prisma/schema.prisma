@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection for the app (Neon: the -pooler host).
+  url       = env("DATABASE_URL")
+  // Direct connection for migrations (Neon: the host without -pooler).
+  directUrl = env("DIRECT_URL")
+}
+
+enum Ownership {
+  PUBLIC
+  PRIVATE
+  DEEMED
+}
+
+enum Degree {
+  BTECH
+  MTECH
+  MBA
+  MBBS
+  BSC
+  BCOM
+  BA
+}
+
+enum Exam {
+  JEE_MAIN
+  JEE_ADV
+  NEET
+  CAT
+  GATE
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  passwordHash     String
+  name             String
+  createdAt        DateTime          @default(now())
+  reviews          Review[]
+  savedColleges    SavedCollege[]
+  savedComparisons SavedComparison[]
+}
+
+model College {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  name            String
+  shortName       String?
+  city            String
+  state           String
+  ownership       Ownership
+  establishedYear Int
+  /// Denormalized from Review: average rating, recomputed in the review transaction.
+  rating          Float          @default(0)
+  /// Denormalized from Review: number of reviews.
+  ratingCount     Int            @default(0)
+  /// Denormalized from Course: cheapest annual fee (totalFees / durationYears), in rupees.
+  minFees         Int
+  /// Denormalized from Course: most expensive annual fee, in rupees.
+  maxFees         Int
+  overview        String         @db.Text
+  website         String?
+  imageUrl        String
+  nirfRank        Int?
+  createdAt       DateTime       @default(now())
+  courses         Course[]
+  placement       Placement?
+  reviews         Review[]
+  examCutoffs     ExamCutoff[]
+  savedBy         SavedCollege[]
+
+  @@index([state])
+  @@index([city])
+  @@index([rating])
+  @@index([minFees])
+}
+
+model Course {
+  id            String  @id @default(cuid())
+  collegeId     String
+  college       College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  name          String
+  degree        Degree
+  durationYears Int
+  /// Total fees for the whole programme, in rupees.
+  totalFees     Int
+  seats         Int
+
+  @@index([collegeId])
+  @@index([degree])
+}
+
+model Placement {
+  id                String   @id @default(cuid())
+  collegeId         String   @unique
+  college           College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  avgPackageLPA     Float
+  medianPackageLPA  Float
+  highestPackageLPA Float
+  /// Share of eligible students placed, 0–100.
+  placementRate     Float
+  topRecruiters     String[]
+  year              Int
+
+  @@index([avgPackageLPA])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  collegeId String
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@unique([collegeId, userId])
+  @@index([collegeId, createdAt])
+}
+
+model ExamCutoff {
+  id          String  @id @default(cuid())
+  collegeId   String
+  college     College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  exam        Exam
+  closingRank Int
+  year        Int
+
+  @@index([collegeId])
+  @@index([exam, closingRank])
+}
+
+model SavedCollege {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeId String
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, collegeId])
+}
+
+model SavedComparison {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeIds String[]
+  name       String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

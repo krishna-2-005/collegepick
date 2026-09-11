@@ -1,0 +1,23 @@
+# Local Postgres for development. Production uses Neon.
+# Start with: docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: collegepick-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: collegepick
+      POSTGRES_PASSWORD: collegepick
+      POSTGRES_DB: collegepick
+    ports:
+      - "5433:5432"
+    volumes:
+      - collegepick-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collegepick"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  collegepick-db:

@@ -1,15 +1,40 @@
-import { notFound, ok, parseWith, route } from "@/lib/api-response";
-import { reviewListQuerySchema } from "@/lib/validations/reviews";
+import { revalidatePath } from "next/cache";
+import { notFound, ok, parseWith, readJson, route } from "@/lib/api-response";
+import { getSessionUser, requireUser } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { reviewInputSchema, reviewListQuerySchema } from "@/lib/validations/reviews";
 import { findCollegeIdBySlug } from "@/server/colleges";
-import { listReviews } from "@/server/reviews";
+import { createReview, hasReviewed, listReviews } from "@/server/reviews";
 
 type Context = { params: Promise<{ slug: string }> };
+
+async function collegeIdOr404(slug: string): Promise<string> {
+  const collegeId = await findCollegeIdBySlug(slug);
+  if (!collegeId) throw notFound(`No college matches "${slug}". Check the link or search again.`);
+  return collegeId;
+}
 
 export const GET = route<Context>(async (request, { params }) => {
   const { slug } = await params;
   const query = parseWith(reviewListQuerySchema, Object.fromEntries(request.nextUrl.searchParams));
-  const collegeId = await findCollegeIdBySlug(slug);
-  if (!collegeId) throw notFound(`No college matches "${slug}". Check the link or search again.`);
-  const { items, nextCursor } = await listReviews(collegeId, query);
-  return ok(items, { nextCursor });
+  const collegeId = await collegeIdOr404(slug);
+  const viewer = await getSessionUser();
+  const [{ items, nextCursor }, viewerHasReviewed] = await Promise.all([
+    listReviews(collegeId, { ...query, viewerId: viewer?.id }),
+    viewer ? hasReviewed(collegeId, viewer.id) : Promise.resolve(false),
+  ]);
+  return ok(items, { nextCursor, viewerHasReviewed });
+});
+
+export const POST = route<Context>(async (request, { params }) => {
+  const user = await requireUser();
+  const { slug } = await params;
+  enforceRateLimit(`review:${user.id}`, { limit: 5, windowMs: 60_000 }, "You're posting reviews too quickly.");
+  const input = parseWith(reviewInputSchema, await readJson(request));
+  const collegeId = await collegeIdOr404(slug);
+  const result = await createReview(collegeId, user.id, input);
+  // The detail page and listing are cached; refresh the pages that show this rating.
+  revalidatePath(`/colleges/${slug}`);
+  revalidatePath("/");
+  return ok(result, undefined, { status: 201 });
 });

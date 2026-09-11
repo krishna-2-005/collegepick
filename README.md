@@ -176,7 +176,11 @@ Prisma errors never reach the client.
 |---|---|---|
 | GET | `/api/colleges` | `q, state, city, course, exam, ownership, minFees, maxFees, minRating, sort, cursor, limit`. Arrays accept `a,b`, repeated keys or `key[]`. `limit` defaults to 12 and is clamped to 50. Returns `meta: { nextCursor, total }`. |
 | GET | `/api/colleges/[slug]` | College with courses, placement, cutoffs, rating distribution and the latest 10 reviews. 404 for unknown slugs. |
-| GET | `/api/colleges/[slug]/reviews` | Newest first, `cursor` + `limit` (1–20). Reviewer names are shown as "First L." |
+| GET | `/api/colleges/[slug]/reviews` | Newest first, `cursor` + `limit` (1–20). Reviewer names are shown as "First L." `meta.viewerHasReviewed` when signed in. |
+| POST | `/api/colleges/[slug]/reviews` | Auth. `{ rating 1–5, title, body }` → 201 with the new rating and count. 409 if you already reviewed it, 429 after 5 posts a minute. |
+| GET | `/api/colleges/compare?ids=a,b,c` | 2–3 distinct slugs, returned in the order asked. 400 for 1, 4+, duplicates or malformed ids; 404 names any slug that doesn't exist. |
+| GET · POST · DELETE | `/api/saved/colleges` | Auth. POST `{ collegeId }` is 201 new / 200 already saved. `DELETE ?collegeId=` is idempotent. |
+| GET · POST · DELETE | `/api/saved/comparisons` | Auth. POST `{ slugs, name? }`; the same set in any order returns the existing one (200). `DELETE ?id=` only deletes your own (404 otherwise). |
 | POST | `/api/auth/signup` | `{ name, email, password }` → 201 `{ id, name, email }`. 409 if the email exists (case-insensitive). Password 8–72 chars. The hash is never returned. |
 | * | `/api/auth/*` | Auth.js: `csrf`, `callback/credentials`, `session`, `signout`. |
 | GET | `/api/filters` | States and cities with counts, degrees, exams, ownership, fee bounds. Static, revalidated hourly. |
@@ -240,12 +244,43 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
 - **`?next=` is validated** (`safeNext`): only same-site relative paths are accepted, so
   `?next=//evil.com` or `?next=https://…` falls back to `/`.
 - **Reviewer names are shortened** to "First L." in every API response.
+- **Idempotent saves.** Saving twice returns 200 with the same result instead of an error, so a
+  double tap or a retry after a flaky network never shows the user a failure. Status codes
+  still tell the truth: 201 when something was created, 200 when it already existed.
+- **Rate limiting returns 429**, the one status code beyond the plan's list, because "you
+  already did this" (409) and "slow down" are different messages for the user.
+- **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
+  readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
   on Vercel.
 
 ## Edge cases
 
-_Documented as each API lands._
+Each one is covered by `pnpm smoke` (107 checks) unless marked UI.
+
+| Case | Behavior |
+|---|---|
+| Invalid query or body | 400 with zod `details: [{ path, message }]` |
+| `minFees > maxFees` | 400, `details[0].path = "minFees"` |
+| `limit` over 50 | Clamped to 50, not rejected |
+| Malformed cursor | 400 "Start again from the first page" |
+| Compare with 1, 4, duplicate or malformed ids | 400 with the specific reason |
+| Compare with an unknown id | 404 naming the missing slug |
+| Duplicate review | 409, one review per user per college (unique index) |
+| Concurrent reviews on one college | Row lock in the transaction; rating always equals the true average |
+| Review spam | 429 after 5 posts a minute per user (in-memory; Upstash for multi-instance) |
+| Duplicate email (any case) | 409; emails are lowercased before insert |
+| Save an already-saved college | 200, idempotent; unsave is idempotent too |
+| Save the same comparison twice | Returns the existing one |
+| Deleting someone else's comparison | 404, never reveals that it exists |
+| Protected API without a session | 401 envelope |
+| `/saved` without a session | 307 to `/login?next=%2Fsaved` |
+| `?next=//evil.com` | Falls back to `/` |
+| Unknown slug | 404 API, 404 page (UI) |
+| Empty results | EmptyState with "Clear filters" (UI) |
+| Typeahead stale responses | Aborted with AbortController (UI) |
+| Compare selection on refresh | Persisted to sessionStorage (UI) |
+| Prisma connections on serverless | Singleton client in `lib/prisma.ts` |
 
 ## What's next
 

@@ -134,6 +134,96 @@ logout
 status=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" "$BASE/saved")
 if [[ "$status" == 307*"/login?next=%2Fsaved" ]]; then PASS=$((PASS + 1)); echo "  ok    307  /saved redirects to login"; else FAIL=$((FAIL + 1)); echo "  FAIL  /saved redirect: $status"; fi
 
+echo "Compare"
+check "three colleges for compare" 200 GET "/api/colleges?sort=name&limit=3"
+A=$(field "b.data[0].slug"); B=$(field "b.data[1].slug"); C=$(field "b.data[2].slug"); D=$SLUG
+A_ID=$(field "b.data[0].id")
+check "compare 3" 200 GET "/api/colleges/compare?ids=$C,$A,$B"
+assert "order preserved with placement" "b.data.map(c => c.slug).join() === '$C,$A,$B' && b.data.every(c => c.placement && c.degrees.length)"
+check "compare 1" 400 GET "/api/colleges/compare?ids=$A"
+check "compare none" 400 GET "/api/colleges/compare"
+check "compare 4" 400 GET "/api/colleges/compare?ids=$A,$B,$C,$D"
+check "compare duplicate" 400 GET "/api/colleges/compare?ids=$A,$A"
+check "compare unknown" 404 GET "/api/colleges/compare?ids=$A,no-such-college"
+assert "404 names the missing college" "b.error.message.includes('no-such-college')"
+check "compare malformed id" 400 GET "/api/colleges/compare?ids=$A,Bad!Id"
+
+echo "Protected endpoints (logged out)"
+check "saved colleges" 401 GET "/api/saved/colleges"
+check "save college" 401 POST "/api/saved/colleges" '{"collegeId":"'"$A_ID"'"}'
+check "saved comparisons" 401 GET "/api/saved/comparisons"
+check "post review" 401 POST "/api/colleges/$A/reviews" '{"rating":5,"title":"Great","body":"A long enough review body for validation to pass."}'
+
+echo "Reviews (logged in)"
+login "$EMAIL" "password123"
+check "detail before review" 200 GET "/api/colleges/$A"
+BEFORE_COUNT=$(field "b.data.ratingCount")
+BEFORE_SUM=$(field "b.data.ratingDistribution.reduce((s, n, i) => s + n * (i + 1), 0)")
+check "review invalid rating" 400 POST "/api/colleges/$A/reviews" '{"rating":7,"title":"Great","body":"A long enough review body for validation to pass."}'
+assert "field errors in details" "b.error.details.some(d => d.path === 'rating')"
+check "review invalid json" 400 POST "/api/colleges/$A/reviews" '{"rating":'
+check "review" 201 POST "/api/colleges/$A/reviews" '{"rating":5,"title":"Smoke test review","body":"Checking that the rating recomputes inside the transaction."}'
+assert "rating recomputed" "b.data.ratingCount === $BEFORE_COUNT + 1 && Math.abs(b.data.rating - ($BEFORE_SUM + 5) / ($BEFORE_COUNT + 1)) < 0.01 && b.data.review.isOwn"
+check "duplicate review" 409 POST "/api/colleges/$A/reviews" '{"rating":4,"title":"Second try","body":"This should be rejected because one review per college."}'
+check "reviews know the viewer" 200 GET "/api/colleges/$A/reviews"
+assert "viewerHasReviewed" "b.meta.viewerHasReviewed === true && b.data.some(r => r.isOwn)"
+got429=no
+for _ in 1 2 3; do
+  code=$(curl -s -o "$BODY" -w "%{http_code}" -b "$JAR" -c "$JAR" -X POST -H "Content-Type: application/json" --data '{}' "$BASE/api/colleges/$B/reviews")
+  if [ "$code" = "429" ]; then got429=yes; break; fi
+done
+if [ "$got429" = "yes" ]; then PASS=$((PASS + 1)); echo "  ok    429  review rate limit"; else FAIL=$((FAIL + 1)); echo "  FAIL  review rate limit never triggered"; fi
+
+echo "Saved colleges (logged in)"
+check "save" 201 POST "/api/saved/colleges" '{"collegeId":"'"$A_ID"'"}'
+check "save again is idempotent" 200 POST "/api/saved/colleges" '{"collegeId":"'"$A_ID"'"}'
+check "list saved" 200 GET "/api/saved/colleges"
+assert "saved list has the college once" "b.data.filter(c => c.id === '$A_ID').length === 1 && b.data[0].savedAt"
+check "save unknown college" 404 POST "/api/saved/colleges" '{"collegeId":"does-not-exist"}'
+check "save without body" 400 POST "/api/saved/colleges" '{}'
+check "unsave" 200 DELETE "/api/saved/colleges?collegeId=$A_ID"
+assert "removed" "b.data.removed === true"
+check "unsave again is idempotent" 200 DELETE "/api/saved/colleges?collegeId=$A_ID"
+assert "nothing removed" "b.data.removed === false"
+
+echo "Saved comparisons (logged in)"
+check "save comparison" 201 POST "/api/saved/comparisons" '{"slugs":["'"$A"'","'"$B"'","'"$C"'"]}'
+CMP_ID=$(field "b.data.id")
+check "same set, other order" 200 POST "/api/saved/comparisons" '{"slugs":["'"$C"'","'"$A"'","'"$B"'"]}'
+assert "returns the existing comparison" "b.data.id === '$CMP_ID'"
+check "save comparison of 1" 400 POST "/api/saved/comparisons" '{"slugs":["'"$A"'"]}'
+check "list comparisons" 200 GET "/api/saved/comparisons"
+assert "comparison listed with colleges in order" "b.data.length === 1 && b.data[0].colleges.map(c => c.slug).join() === '$A,$B,$C'"
+login "demo@collegepick.dev" "password123"
+check "someone else's comparison" 404 DELETE "/api/saved/comparisons?id=$CMP_ID"
+login "$EMAIL" "password123"
+check "delete comparison" 200 DELETE "/api/saved/comparisons?id=$CMP_ID"
+check "delete again" 404 DELETE "/api/saved/comparisons?id=$CMP_ID"
+logout
+
+echo "Concurrent reviews keep the rating consistent"
+JARS=()
+for n in 1 2 3 4 5; do
+  jar="$(mktemp)"
+  JARS+=("$jar")
+  email="smoke-par-$n-$(date +%s)-$RANDOM@example.com"
+  curl -s -o /dev/null -X POST -H "Content-Type: application/json" \
+    --data '{"name":"Parallel Tester","email":"'"$email"'","password":"password123"}' "$BASE/api/auth/signup"
+  curl -s -b "$jar" -c "$jar" -o "$BODY" "$BASE/api/auth/csrf"
+  csrf=$(field "b.csrfToken")
+  curl -s -b "$jar" -c "$jar" -o /dev/null -X POST --data-urlencode "csrfToken=$csrf" \
+    --data-urlencode "email=$email" --data-urlencode "password=password123" "$BASE/api/auth/callback/credentials"
+done
+for n in 1 2 3 4 5; do
+  curl -s -o /dev/null -b "${JARS[$((n - 1))]}" -X POST -H "Content-Type: application/json" \
+    --data '{"rating":'"$n"',"title":"Parallel review","body":"Posted at the same moment as four others to test locking."}' \
+    "$BASE/api/colleges/$C/reviews" &
+done
+wait
+rm -f "${JARS[@]}"
+check "detail after parallel reviews" 200 GET "/api/colleges/$C"
+assert "rating equals the average of all reviews" "(() => { const d = b.data.ratingDistribution; const n = d.reduce((s, x) => s + x, 0); const avg = d.reduce((s, x, i) => s + x * (i + 1), 0) / n; return n === b.data.ratingCount && Math.abs(avg - b.data.rating) < 0.01; })()"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

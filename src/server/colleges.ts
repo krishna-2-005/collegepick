@@ -1,12 +1,18 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
-import { badRequest } from "@/lib/api-response";
+import { badRequest, notFound } from "@/lib/api-response";
 import { DEGREE_LABELS, EXAM_LABELS, OWNERSHIP_LABELS, type SortValue } from "@/lib/constants";
 import { decodeCursor, encodeCursor, type Cursor } from "@/lib/cursor";
 import { prisma } from "@/lib/prisma";
 import type { CollegeFilters, CollegeListQuery } from "@/lib/validations/colleges";
-import type { CollegeCardData, CollegeDetail, CollegeListMeta, FilterOptions } from "@/types/college";
+import type {
+  CollegeCardData,
+  CollegeDetail,
+  CollegeListMeta,
+  CompareCollege,
+  FilterOptions,
+} from "@/types/college";
 import { getRatingDistribution, listReviews } from "./reviews";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -196,6 +202,51 @@ export const getCollegeBySlug = cache(async (slug: string, viewerId?: string): P
     reviewsNextCursor: reviews.nextCursor,
   };
 });
+
+/**
+ * Colleges for the compare table, in the order requested. Throws a 404 naming
+ * the slugs that don't exist, so a stale shared link says exactly what's wrong.
+ */
+export async function getCollegesForCompare(slugs: string[]): Promise<CompareCollege[]> {
+  const rows = await prisma.college.findMany({
+    where: { slug: { in: slugs } },
+    select: {
+      ...collegeCardSelect,
+      establishedYear: true,
+      placement: {
+        select: {
+          avgPackageLPA: true,
+          medianPackageLPA: true,
+          highestPackageLPA: true,
+          placementRate: true,
+          topRecruiters: true,
+          year: true,
+        },
+      },
+      courses: { select: { degree: true } },
+    },
+  });
+
+  const bySlug = new Map(rows.map((row) => [row.slug, row]));
+  const missing = slugs.filter((slug) => !bySlug.has(slug));
+  if (missing.length > 0) {
+    throw notFound(
+      `We couldn't find ${missing.map((slug) => `"${slug}"`).join(", ")}. Remove ${missing.length === 1 ? "it" : "them"} and pick again.`,
+    );
+  }
+
+  return slugs.map((slug) => {
+    const { courses, placement, ...rest } = bySlug.get(slug)!;
+    return {
+      ...rest,
+      placement,
+      avgPackageLPA: placement?.avgPackageLPA ?? null,
+      placementRate: placement?.placementRate ?? null,
+      degrees: [...new Set(courses.map((course) => course.degree))],
+      courseCount: courses.length,
+    };
+  });
+}
 
 /** Minimal lookup used by write paths (reviews, saves). */
 export async function findCollegeIdBySlug(slug: string): Promise<string | null> {

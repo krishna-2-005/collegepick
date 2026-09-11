@@ -52,6 +52,24 @@ export type CollegeDetail = Omit<CollegeCardData, "avgPackageLPA" | "placementRa
   reviewsNextCursor: string | null;
 };
 
+export type CompareCollege = CollegeCardData & {
+  establishedYear: number;
+  placement: PlacementData | null;
+  degrees: DegreeValue[];
+  courseCount: number;
+};
+
+export type CollegeSummary = Pick<CollegeCardData, "id" | "slug" | "name" | "shortName" | "imageUrl" | "city" | "state">;
+
+export type SavedCollegeData = CollegeCardData & { savedAt: string };
+
+export type SavedComparisonData = {
+  id: string;
+  name: string | null;
+  createdAt: string;
+  colleges: CollegeSummary[];
+};
+
 export type FilterOptions = {
   states: { value: string; count: number }[];
   cities: { value: string; state: string; count: number }[];

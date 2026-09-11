@@ -1,8 +1,9 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
-import { badRequest } from "@/lib/api-response";
+import { Prisma } from "@prisma/client";
+import { badRequest, conflict } from "@/lib/api-response";
 import { decodeCursor, encodeCursor } from "@/lib/cursor";
 import { prisma } from "@/lib/prisma";
+import type { ReviewInput } from "@/lib/validations/reviews";
 import type { RatingDistribution, ReviewData } from "@/types/review";
 
 export const REVIEW_PAGE_SIZE = 10;
@@ -68,6 +69,49 @@ export async function listReviews(
     rows.length > limit && last ? encodeCursor({ v: last.createdAt.toISOString(), id: last.id }) : null;
 
   return { items: page.map((row) => toReview(row, viewerId)), nextCursor };
+}
+
+export async function hasReviewed(collegeId: string, userId: string): Promise<boolean> {
+  const review = await prisma.review.findUnique({
+    where: { collegeId_userId: { collegeId, userId } },
+    select: { id: true },
+  });
+  return Boolean(review);
+}
+
+/**
+ * Creates the review and recomputes the college's denormalized rating in one
+ * transaction. `FOR UPDATE` on the college row serialises concurrent reviews for
+ * the same college, so each recompute sees every committed review.
+ */
+export async function createReview(
+  collegeId: string,
+  userId: string,
+  input: ReviewInput,
+): Promise<{ review: ReviewData; rating: number; ratingCount: number }> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "College" WHERE id = ${collegeId} FOR UPDATE`;
+      const row = await tx.review.create({
+        data: { collegeId, userId, rating: input.rating, title: input.title, body: input.body },
+        select: reviewSelect,
+      });
+      const stats = await tx.review.aggregate({
+        where: { collegeId },
+        _avg: { rating: true },
+        _count: { _all: true },
+      });
+      const rating = Math.round((stats._avg.rating ?? 0) * 100) / 100;
+      const ratingCount = stats._count._all;
+      await tx.college.update({ where: { id: collegeId }, data: { rating, ratingCount } });
+      return { review: toReview(row, userId), rating, ratingCount };
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw conflict("You've already reviewed this college. Each account can post one review per college.");
+    }
+    throw error;
+  }
 }
 
 export async function getRatingDistribution(collegeId: string): Promise<RatingDistribution> {

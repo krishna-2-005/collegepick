@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* Design tokens (PLAN §3.2). Light only — no dark mode. */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --ink: #14213d;
+  --ink-muted: #5b6478;
+  --line: #e3e6ec;
+  --accent: #1f5eff;
+  --accent-soft: #e8eeff;
+  --good: #12805c;
+  --warn: #b45309;
+  --gold: #c99a2e;
+
+  /* Pressed/hover shades derived from the tokens above, not new colors. */
+  --accent-strong: color-mix(in srgb, var(--accent) 84%, var(--ink));
+  --warn-strong: color-mix(in srgb, var(--warn) 84%, var(--ink));
+
+  /* The only shadow in the app: sticky compare bar and dialogs. */
+  --shadow-float: 0 8px 32px rgba(20, 33, 61, 0.12);
+}
+
+/*
+ * Reset Tailwind's defaults so off-system values produce no CSS:
+ * no stock palette, no stock shadows, no stock radii, no stock type scale.
+ */
+@theme {
+  --color-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --radius-*: initial;
+  --text-*: initial;
+  --font-*: initial;
+
+  --radius-control: 6px;
+  --radius-card: 12px;
+  --radius-panel: 20px;
+  --radius-full: 9999px;
+
+  /* Type scale 12 / 14 / 16 / 18 / 22 / 28 / 36 / 52 (PLAN §3.3). */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.35;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.12;
+  --text-4xl: 3.25rem;
+  --text-4xl--line-height: 1.05;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-strong: var(--accent-strong);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-warn-strong: var(--warn-strong);
+  --color-gold: var(--gold);
+  --color-white: #ffffff;
+
+  --shadow-float: var(--shadow-float);
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--line);
+  }
+
+  html {
+    background-color: var(--bg);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    /* Every number in the app is tabular (PLAN §3.3). */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  select {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Dual-thumb range: two native range inputs stacked on one track. */
+  .range-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    appearance: none;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .range-input:focus-visible {
+    outline: none;
+  }
+
+  .range-input::-webkit-slider-thumb {
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid var(--accent);
+    background: var(--surface);
+    pointer-events: auto;
+    cursor: grab;
+  }
+
+  .range-input::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    border: 2px solid var(--accent);
+    background: var(--surface);
+    pointer-events: auto;
+    cursor: grab;
+  }
+
+  .range-input:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .range-input:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .range-input::-webkit-slider-runnable-track {
+    background: transparent;
+  }
+
+  .range-input::-moz-range-track {
+    background: transparent;
+  }
+}
+
+/*
+ * Motion policy (PLAN §3.6): only the compare bar, results cross-fade and save
+ * heart animate. Toasts appear without motion; sonner's transitions are off.
+ */
+[data-sonner-toast] {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

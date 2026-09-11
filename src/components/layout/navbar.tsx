@@ -10,13 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { useCompareStore } from "@/store/compare";
 import { Container } from "./container";
 import { Logo } from "./logo";
-
-type NavbarProps = {
-  /** Colleges currently in the compare selection. */
-  compareCount?: number;
-};
 
 const links = [
   { href: "/colleges", label: "Colleges" },
@@ -24,8 +20,9 @@ const links = [
   { href: "/saved", label: "Saved" },
 ] as const;
 
-export function Navbar({ compareCount = 0 }: NavbarProps) {
+export function Navbar() {
   const pathname = usePathname();
+  const compareCount = useCompareStore((state) => state.items.length);
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
 

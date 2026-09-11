@@ -5,8 +5,11 @@ Find the college that fits you, not just the one that ranks.
 CollegePick is a college discovery tool: search and filter colleges, read fees, placements and
 reviews on one page, compare up to three colleges side by side, and save what you shortlist.
 
-- Live: _not deployed yet_
+- **Live: https://collegepick.vercel.app**
 - Repo: https://github.com/krishna-2-005/collegepick
+- Demo login: `demo@collegepick.dev` / `password123` (or sign up with any email)
+
+![CollegePick home page](docs/screenshots/home-1280.jpg)
 
 ## Status
 
@@ -18,7 +21,8 @@ reviews on one page, compare up to three colleges side by side, and save what yo
 | Auth (email and password) | Done |
 | Home, listing, detail, compare, saved pages | Done |
 | Polish and accessibility pass | Done |
-| Deploy (Vercel + Neon) | Ready, see [Deploy](#deploy) |
+| Deploy (Vercel + Neon, Singapore) | Live, every push to `main` deploys |
+| Predictor (stretch) | Done |
 
 ## Features
 
@@ -341,6 +345,16 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
 - **Predictor bands are ratios of your rank**, not fixed gaps: 5,000 ranks is a lot at rank
   2,000 and nothing at rank 200,000. It was built before deploy (the plan puts it after)
   because deploy is waiting on hosting credentials.
+- **Everything runs in Singapore.** Neon is in `aws-ap-southeast-1` and `vercel.json` pins
+  functions to `sin1`, so every query is a same-region hop and the nearest region to users in
+  India. With the default US region, uncached API calls took ~2.5 s crossing the Pacific; now
+  ~0.5 s warm.
+- **List and filter queries are cached with tag invalidation** (`unstable_cache`, tag
+  `colleges`): 60 s for list queries, an hour for filter options. Posting a review calls
+  `revalidateTag`, so ratings are never stale after a write, only between writes.
+- **Desktop filters aren't hydrated on phones.** The sidebar renders only when a
+  `(min-width: 1024px)` media query matches; phones use the drawer, which builds its panel
+  only when opened.
 - **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
   readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
@@ -348,18 +362,24 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
 
 ## Quality checks
 
+All run against the live site (`BASE_URL=https://collegepick.vercel.app`).
+
 | Check | Command | Result |
 |---|---|---|
-| API contract and edge cases | `pnpm smoke` | 117 checks passing |
+| API contract and edge cases | `pnpm smoke` | 117 of 117 passing in production |
 | Accessibility (axe, WCAG 2.1 AA) | `pnpm a11y` | 0 violations on 14 pages at 375 and 1280px, logged in and out |
-| Lighthouse, listing page, desktop | `lighthouse --preset=desktop` | Performance 98 |
-| Lighthouse, listing page, mobile | `lighthouse` | Accessibility 98, Best practices 96, SEO 91, Performance 60–71 |
+| Lighthouse, desktop | `lighthouse --preset=desktop` | Listing: Performance 98, Accessibility 98, Best practices 100, SEO 91 |
+| Lighthouse, mobile, home | `lighthouse` | Performance 81–97, Accessibility 100, Best practices 100, SEO 100 |
+| Lighthouse, mobile, listing | `lighthouse` | Performance 60–78, Accessibility 98, Best practices 100, SEO 91; CLS 0 |
 | Reduced motion | manual script | Compare bar and results fade render at rest immediately; no other CSS animation exists |
 
-The mobile performance score was measured on a slow dev laptop (Lighthouse benchmark index
-1067) under Lighthouse's 4× CPU throttle. Layout shift is 0; the cost is hydrating the
-interactive listing (filters plus 12 cards with save/compare state). The fix is in
-"What's next": render the first page of cards as server components.
+Mobile scores come from Lighthouse's simulated slow phone running on a slow dev laptop
+(benchmark index 1067), so they swing by 15+ points between identical runs; home and listing
+do about the same main-thread work. For a standardized number, run the live URL through
+[PageSpeed Insights](https://pagespeed.web.dev/). Performance work so far: functions pinned
+to Singapore next to the database, filter options and list queries cached with tag
+invalidation, the desktop filter sidebar not hydrated on phones, Recharts and animation code
+lazy-loaded.
 
 ## Edge cases
 
@@ -391,7 +411,9 @@ Each one is covered by `pnpm smoke` (117 checks) unless marked UI.
 
 ## Deploy
 
-Vercel for the app, Neon for Postgres.
+Live at https://collegepick.vercel.app: Vercel project `collegepick` connected to this GitHub
+repo (every push to `main` is a production deploy), Neon project `collegepick` in Singapore.
+To set up your own copy:
 
 1. **Neon:** create a project. Copy the pooled connection string (host contains `-pooler`) and
    the direct one.
@@ -412,8 +434,8 @@ explicitly (step 2), not during the build, so a failed deploy never half-migrate
 
 ## What's next
 
-- **Server-render the first page of cards** on the listing so phones hydrate less (the main
-  thing holding back mobile Lighthouse performance).
+- **Server-render the first page of cards** on the listing (static card markup with small
+  client islands for save and compare) to cut hydration further on low-end phones.
 - **Revocable sessions:** a `tokenVersion` on the user, checked in the JWT callback.
 - **Shared rate limiting** with Upstash Redis so the limit holds across serverless instances.
 - **Search quality:** a `pg_trgm` index for typo-tolerant name search as the dataset grows.

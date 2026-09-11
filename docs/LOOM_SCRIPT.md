@@ -1,5 +1,7 @@
 # Loom script (about 9 minutes)
 
+Live site: https://collegepick.vercel.app (demo login `demo@collegepick.dev` / `password123`).
+
 Have ready: the live site on desktop and a phone-sized window, the browser network tab, the
 repo open at `src/server/reviews.ts` and `src/server/colleges.ts`, Prisma Studio.
 

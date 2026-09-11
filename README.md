@@ -266,6 +266,18 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
   image never needs a legibility gradient, and the design rules ban gradients.
 - **`tailwind-merge` in `cn()`** so a `className` passed to a kit component reliably overrides
   its defaults (`h-11` then `h-13` resolves to `h-13`).
+- **Compare state: URL on `/compare`, sessionStorage everywhere else.** The zustand store
+  (persisted to sessionStorage, rehydrated after mount to avoid hydration mismatches) feeds the
+  compare bar and the card toggles. On `/compare` the `ids` param is the source of truth and is
+  mirrored back into the store, so a shared link becomes your selection, and opening `/compare`
+  with no ids restores the tab's selection.
+- **"Best" only when it means something.** A row marks a winner only if at least two colleges
+  have a value and they differ. Fees and NIRF rank favour the lowest value; the rest favour
+  the highest. The radar scores are relative to the colleges shown (cheapest fee = 100), which
+  the chart says in its caption.
+- **One validation message when there's one problem.** A 400 with a single zod issue uses that
+  issue as the message ("Each college can only appear once in a comparison."), so the UI can
+  show the API's words directly.
 - **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
   readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step

@@ -66,7 +66,8 @@ export function route<Ctx = unknown>(handler: Handler<Ctx>): Handler<Ctx> {
     } catch (error) {
       if (error instanceof ApiError) return fail(error.status, error.code, error.message, error.details);
       if (error instanceof ZodError) {
-        return fail(400, "BAD_REQUEST", "Some parameters are invalid. See details.", issuesOf(error));
+        const issues = issuesOf(error);
+        return fail(400, "BAD_REQUEST", validationMessage(issues), issues);
       }
       console.error(`[api] ${request.method} ${request.nextUrl.pathname}`, error);
       return fail(500, "INTERNAL", "The server hit an unexpected error. Try again in a moment.");
@@ -74,11 +75,17 @@ export function route<Ctx = unknown>(handler: Handler<Ctx>): Handler<Ctx> {
   };
 }
 
+function validationMessage(issues: ApiIssue[]): string {
+  // One problem: say it directly. Several: summarise; each is in details.
+  return issues.length === 1 && issues[0] ? issues[0].message : `${issues.length} values are invalid. See details.`;
+}
+
 /** Parse with a zod schema or throw a 400 with field-level details. */
 export function parseWith<T>(schema: ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (!result.success) {
-    throw badRequest("Some parameters are invalid. See details.", issuesOf(result.error));
+    const issues = issuesOf(result.error);
+    throw badRequest(validationMessage(issues), issues);
   }
   return result.data;
 }

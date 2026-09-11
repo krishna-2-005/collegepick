@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
+import { CompareBar } from "@/components/compare/compare-bar";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { Providers } from "@/components/providers";
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             {children}
           </main>
           <Footer />
+          <CompareBar />
           <Toaster />
         </Providers>
       </body>

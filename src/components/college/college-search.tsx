@@ -19,6 +19,8 @@ type CollegeSearchProps = {
   autoFocus?: boolean;
   placeholder?: string;
   label?: string;
+  /** "inline" renders suggestions in the flow (inside dialogs, where an overlay would be clipped). */
+  listPosition?: "overlay" | "inline";
 };
 
 /** WAI-ARIA combobox: arrow keys move through suggestions, Enter picks, Escape closes. */
@@ -30,6 +32,7 @@ export function CollegeSearch({
   autoFocus = false,
   placeholder = "Search colleges, cities, courses",
   label = "Search colleges",
+  listPosition = "overlay",
 }: CollegeSearchProps) {
   const router = useRouter();
   const id = useId();
@@ -141,7 +144,10 @@ export function CollegeSearch({
             id={listboxId}
             role="listbox"
             aria-label="Suggested colleges"
-            className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-card border border-line bg-surface py-1"
+            className={cn(
+              "mt-1.5 overflow-hidden rounded-card border border-line bg-surface py-1",
+              listPosition === "overlay" && "absolute inset-x-0 top-full z-30",
+            )}
           >
             {options.map((college, index) => (
               <li

@@ -10,23 +10,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { useCompareStore } from "@/store/compare";
+import { compareHref, useCompareStore } from "@/store/compare";
 import { Container } from "./container";
 import { Logo } from "./logo";
 
-const links = [
-  { href: "/colleges", label: "Colleges" },
-  { href: "/compare", label: "Compare" },
-  { href: "/saved", label: "Saved" },
-] as const;
-
 export function Navbar() {
   const pathname = usePathname();
-  const compareCount = useCompareStore((state) => state.items.length);
+  const compareItems = useCompareStore((state) => state.items);
+  const compareCount = compareItems.length;
+  // "Compare" opens the current selection, so the navbar is a way back to it.
+  const links = [
+    { path: "/colleges", href: "/colleges", label: "Colleges" },
+    { path: "/compare", href: compareHref(compareItems), label: "Compare" },
+    { path: "/saved", href: "/saved", label: "Saved" },
+  ];
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
   const onAuthPage = pathname === "/login" || pathname === "/signup";
   const loginHref = onAuthPage || pathname === "/" ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
   const user = session?.user;
@@ -45,17 +46,17 @@ export function Navbar() {
         <nav aria-label="Main" className="hidden h-full items-stretch gap-6 md:flex">
           {links.map((link) => (
             <Link
-              key={link.href}
+              key={link.path}
               href={link.href}
-              aria-current={isActive(link.href) ? "page" : undefined}
+              aria-current={isActive(link.path) ? "page" : undefined}
               className={cn(
                 "relative flex items-center gap-2 text-[0.9375rem] font-medium",
-                isActive(link.href) ? "text-ink" : "text-ink-muted hover:text-ink",
+                isActive(link.path) ? "text-ink" : "text-ink-muted hover:text-ink",
               )}
             >
               {link.label}
-              {link.href === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
-              {isActive(link.href) ? (
+              {link.path === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
+              {isActive(link.path) ? (
                 <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />
               ) : null}
             </Link>
@@ -100,17 +101,17 @@ export function Navbar() {
         <nav aria-label="Main" className="flex flex-col">
           {links.map((link) => (
             <Link
-              key={link.href}
+              key={link.path}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              aria-current={isActive(link.href) ? "page" : undefined}
+              aria-current={isActive(link.path) ? "page" : undefined}
               className={cn(
                 "flex h-12 items-center justify-between border-b border-line text-base font-medium last:border-b-0",
-                isActive(link.href) ? "text-accent" : "text-ink",
+                isActive(link.path) ? "text-accent" : "text-ink",
               )}
             >
               {link.label}
-              {link.href === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
+              {link.path === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
             </Link>
           ))}
         </nav>

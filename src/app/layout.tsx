@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -42,12 +43,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
           Skip to content
         </a>
-        <Navbar />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
+        <Providers>
+          <Navbar />
+          <main id="main" className="flex-1">
+            {children}
+          </main>
+          <Footer />
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

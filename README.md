@@ -177,6 +177,8 @@ Prisma errors never reach the client.
 | GET | `/api/colleges` | `q, state, city, course, exam, ownership, minFees, maxFees, minRating, sort, cursor, limit`. Arrays accept `a,b`, repeated keys or `key[]`. `limit` defaults to 12 and is clamped to 50. Returns `meta: { nextCursor, total }`. |
 | GET | `/api/colleges/[slug]` | College with courses, placement, cutoffs, rating distribution and the latest 10 reviews. 404 for unknown slugs. |
 | GET | `/api/colleges/[slug]/reviews` | Newest first, `cursor` + `limit` (1–20). Reviewer names are shown as "First L." |
+| POST | `/api/auth/signup` | `{ name, email, password }` → 201 `{ id, name, email }`. 409 if the email exists (case-insensitive). Password 8–72 chars. The hash is never returned. |
+| * | `/api/auth/*` | Auth.js: `csrf`, `callback/credentials`, `session`, `signout`. |
 | GET | `/api/filters` | States and cities with counts, degrees, exams, ownership, fee bounds. Static, revalidated hourly. |
 
 `pnpm smoke` runs curl checks against a running app, covering happy paths and the error
@@ -227,6 +229,17 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
   deeper you page. The trade-off is no "jump to page 7", which a "Load more" list doesn't need.
 - **Fee filter means overlap.** `maxFees=200000` returns colleges with at least one programme at
   or under ₹2L a year, which matches how students read "under 2L".
+- **Credentials auth with JWT sessions.** The brief asks for email and password, and JWT
+  sessions keep auth stateless on serverless (no session table, no DB hit to read a session).
+  The trade-off is that a session can't be revoked before it expires (30 days); a production
+  version would add a token version on the user row. The config is split: `auth.config.ts` is
+  dependency-free for middleware, `auth.ts` adds the Prisma/bcrypt provider.
+- **Middleware only guards pages** (`/saved`, and bounces signed-in users away from
+  `/login`). API routes check the session themselves with `requireUser()`, so a missing
+  matcher can never expose data.
+- **`?next=` is validated** (`safeNext`): only same-site relative paths are accepted, so
+  `?next=//evil.com` or `?next=https://…` falls back to `/`.
+- **Reviewer names are shortened** to "First L." in every API response.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
   on Vercel.
 

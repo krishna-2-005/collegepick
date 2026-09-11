@@ -3,9 +3,11 @@
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { Container } from "./container";
@@ -24,9 +26,19 @@ const links = [
 
 export function Navbar({ compareCount = 0 }: NavbarProps) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const onAuthPage = pathname === "/login" || pathname === "/signup";
+  const loginHref = onAuthPage || pathname === "/" ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
+  const user = session?.user;
+  const firstName = user?.name?.split(" ")[0] ?? "";
+
+  const logOut = () => {
+    setMenuOpen(false);
+    void signOut({ redirectTo: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -45,9 +57,7 @@ export function Navbar({ compareCount = 0 }: NavbarProps) {
               )}
             >
               {link.label}
-              {link.href === "/compare" && compareCount > 0 ? (
-                <CompareCount count={compareCount} />
-              ) : null}
+              {link.href === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
               {isActive(link.href) ? (
                 <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />
               ) : null}
@@ -56,18 +66,35 @@ export function Navbar({ compareCount = 0 }: NavbarProps) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden md:block">
-            <ButtonLink href="/login" variant="secondary" size="sm">
-              Log in
-            </ButtonLink>
+          <div className="hidden items-center gap-2 md:flex">
+            {status === "loading" || (onAuthPage && !user) ? (
+              <span aria-hidden className="h-9 w-20" />
+            ) : user ? (
+              <>
+                <span className="flex items-center gap-2 text-sm font-medium text-ink">
+                  <Avatar name={user.name ?? "You"} size="sm" />
+                  {firstName}
+                </span>
+                <Button variant="ghost" size="sm" onClick={logOut}>
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <ButtonLink href={loginHref} variant="secondary" size="sm">
+                Log in
+              </ButtonLink>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
-            className="flex size-10 items-center justify-center rounded-control text-ink hover:bg-line/60 md:hidden"
+            className="relative flex size-10 items-center justify-center rounded-control text-ink hover:bg-line/60 md:hidden"
           >
             <Menu aria-hidden className="size-5" />
+            {compareCount > 0 ? (
+              <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent" />
+            ) : null}
           </button>
         </div>
       </Container>
@@ -86,15 +113,25 @@ export function Navbar({ compareCount = 0 }: NavbarProps) {
               )}
             >
               {link.label}
-              {link.href === "/compare" && compareCount > 0 ? (
-                <CompareCount count={compareCount} />
-              ) : null}
+              {link.href === "/compare" && compareCount > 0 ? <CompareCount count={compareCount} /> : null}
             </Link>
           ))}
         </nav>
-        <ButtonLink href="/login" onClick={() => setMenuOpen(false)} className="mt-4 w-full">
-          Log in
-        </ButtonLink>
+        {user ? (
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+            <span className="flex min-w-0 items-center gap-2 text-sm">
+              <Avatar name={user.name ?? "You"} size="sm" />
+              <span className="truncate">{user.email}</span>
+            </span>
+            <Button variant="secondary" size="sm" onClick={logOut}>
+              Log out
+            </Button>
+          </div>
+        ) : (
+          <ButtonLink href={loginHref} onClick={() => setMenuOpen(false)} className="mt-4 w-full">
+            Log in
+          </ButtonLink>
+        )}
       </Drawer>
     </header>
   );

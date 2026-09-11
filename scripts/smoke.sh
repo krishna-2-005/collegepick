@@ -43,6 +43,18 @@ field() {
   node -e "const b=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log($1)" "$BODY"
 }
 
+# login <email> <password> -> Auth.js credentials flow (CSRF token + callback), session cookie lands in $JAR
+login() {
+  curl -s -b "$JAR" -c "$JAR" -o "$BODY" "$BASE/api/auth/csrf"
+  local csrf
+  csrf=$(field "b.csrfToken")
+  curl -s -b "$JAR" -c "$JAR" -o /dev/null -X POST \
+    --data-urlencode "csrfToken=$csrf" --data-urlencode "email=$1" --data-urlencode "password=$2" \
+    "$BASE/api/auth/callback/credentials"
+}
+
+logout() { : > "$JAR"; }
+
 echo "Colleges list"
 check "default list" 200 GET "/api/colleges"
 assert "envelope has data, total and 12 items" "b.ok && b.data.length === 12 && b.meta.total === 200"
@@ -102,6 +114,25 @@ check "reviews unknown college" 404 GET "/api/colleges/no-such-college/reviews"
 echo "Filters"
 check "filter options" 200 GET "/api/filters"
 assert "15 states with counts" "b.data.states.length === 15 && b.data.states.every(s => s.count > 0)"
+
+echo "Auth"
+EMAIL="smoke-$(date +%s)-$RANDOM@example.com"
+check "signup short password" 400 POST "/api/auth/signup" '{"name":"Smoke Test","email":"'"$EMAIL"'","password":"short"}'
+check "signup invalid email" 400 POST "/api/auth/signup" '{"name":"Smoke Test","email":"not-an-email","password":"password123"}'
+check "signup invalid json" 400 POST "/api/auth/signup" '{"name":'
+check "signup" 201 POST "/api/auth/signup" '{"name":"Smoke Test","email":"'"$EMAIL"'","password":"password123"}'
+assert "signup never returns the hash" "b.ok && b.data.email === '$EMAIL' && !('passwordHash' in b.data)"
+UPPER_EMAIL=$(echo "$EMAIL" | tr '[:lower:]' '[:upper:]')
+check "duplicate email (any case)" 409 POST "/api/auth/signup" '{"name":"Smoke Test","email":"'"$UPPER_EMAIL"'","password":"password123"}'
+login "$EMAIL" "wrong-password"
+check "wrong password gives no session" 200 GET "/api/auth/session"
+assert "no session" "b === null || !b.user"
+login "demo@collegepick.dev" "password123"
+check "demo login" 200 GET "/api/auth/session"
+assert "session has user id" "b.user && b.user.email === 'demo@collegepick.dev' && b.user.id"
+logout
+status=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" "$BASE/saved")
+if [[ "$status" == 307*"/login?next=%2Fsaved" ]]; then PASS=$((PASS + 1)); echo "  ok    307  /saved redirects to login"; else FAIL=$((FAIL + 1)); echo "  FAIL  /saved redirect: $status"; fi
 
 echo
 echo "$PASS passed, $FAIL failed"

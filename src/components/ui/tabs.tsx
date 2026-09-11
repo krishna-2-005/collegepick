@@ -71,7 +71,7 @@ export function Tabs({ items, label, defaultValue, value, onValueChange, classNa
               onClick={() => select(item.value)}
               onKeyDown={(event) => onKeyDown(event, index)}
               className={cn(
-                "-mb-px flex h-11 items-center gap-2 border-b-2 text-[0.9375rem] font-medium whitespace-nowrap",
+                "-mb-px flex h-11 items-center gap-2 rounded-t-control border-b-2 text-[0.9375rem] font-medium whitespace-nowrap",
                 selected
                   ? "border-accent text-ink"
                   : "border-transparent text-ink-muted hover:text-ink",

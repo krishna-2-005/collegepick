@@ -167,7 +167,18 @@ packages and cutoffs together, so the numbers stay believable relative to each o
 
 ## API reference
 
-_Added with the API work._
+Every response uses one envelope: `{ ok: true, data, meta? }` or
+`{ ok: false, error: { code, message, details? } }`. Validation errors are 400 with zod
+`details` (`[{ path, message }]`). Unexpected errors are logged and returned as a plain 500;
+Prisma errors never reach the client.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/colleges` | `q, state, city, course, exam, ownership, minFees, maxFees, minRating, sort, cursor, limit`. Arrays accept `a,b`, repeated keys or `key[]`. `limit` defaults to 12 and is clamped to 50. Returns `meta: { nextCursor, total }`. |
+| GET | `/api/filters` | States and cities with counts, degrees, exams, ownership, fee bounds. Static, revalidated hourly. |
+
+`pnpm smoke` runs curl checks against a running app, covering happy paths and the error
+cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with no gaps).
 
 ## Decisions
 
@@ -208,6 +219,12 @@ _Added with the API work._
   connection can't run migrations.
 - **Prisma 6, not 7.** Prisma 7 moves to required driver adapters and a new config file; 6 is
   the stable, well-documented line for this stack.
+- **Keyset (cursor) pagination, not offset.** The cursor is an opaque base64 of the last row's
+  sort value and id; the next page is `WHERE (sort, id) > cursor`. Offsets skip or repeat rows
+  when a new review changes a rating between two "Load more" clicks, and they get slower the
+  deeper you page. The trade-off is no "jump to page 7", which a "Load more" list doesn't need.
+- **Fee filter means overlap.** `maxFees=200000` returns colleges with at least one programme at
+  or under ₹2L a year, which matches how students read "under 2L".
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step
   on Vercel.
 

@@ -1,0 +1,11 @@
+# Never upload local secrets, private notes or build output with `vercel deploy`.
+.env
+.env.*
+!.env.example
+PLAN.md
+GIT_RULES.md
+node_modules
+.next
+.vercel
+.screenshots
+docs/screenshots

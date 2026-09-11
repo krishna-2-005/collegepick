@@ -23,8 +23,13 @@ const sans = Inter({
 
 const tagline = "Find the college that fits you, not just the one that ranks.";
 
+// Explicit URL first, then Vercel's production domain, then local dev.
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(appUrl),
   title: { default: "CollegePick", template: "%s · CollegePick" },
   description: tagline,
   openGraph: { siteName: "CollegePick", title: "CollegePick", description: tagline, type: "website" },

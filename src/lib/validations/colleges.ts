@@ -50,7 +50,7 @@ export const collegeListQuerySchema = z
       .transform((value) => Math.min(value, MAX_PAGE_SIZE)),
   })
   .refine((query) => query.minFees === undefined || query.maxFees === undefined || query.minFees <= query.maxFees, {
-    message: "minFees must be less than or equal to maxFees.",
+    message: "The minimum fee is higher than the maximum fee.",
     path: ["minFees"],
   });
 

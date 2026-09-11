@@ -249,6 +249,23 @@ cases (bad params, `minFees > maxFees`, malformed cursor, a full page walk with 
   still tell the truth: 201 when something was created, 200 when it already existed.
 - **Rate limiting returns 429**, the one status code beyond the plan's list, because "you
   already did this" (409) and "slow down" are different messages for the user.
+- **Rendering per page.** Home is static and revalidated hourly. The listing renders its first
+  page on the server for the exact URL, then the client takes over (the server result seeds the
+  TanStack Query cache under the same canonical key, so there's no double fetch). College pages
+  are ISR, cached on first visit and revalidated on demand when a review is posted.
+- **No `loading.tsx` on college pages.** A streaming skeleton sends a 200 before the page can
+  call `notFound()`, so unknown slugs would return 200. College pages are cached, so the
+  skeleton would rarely show; a correct 404 matters more. The listing's skeleton lives in a
+  `(list)` route group so it doesn't wrap the detail route.
+- **Reviews publish optimistically.** The dialog closes and the review appears at the top at
+  once; if the server rejects it (409, 429, network), the list rolls back and the dialog
+  reopens with the draft and the reason.
+- **Recharts is lazy-loaded** on the college page (~100 kB kept out of the first load) and chart
+  animation is off, per the motion policy.
+- **No gradient on the cover image.** The plan's layout puts the title below the image, so the
+  image never needs a legibility gradient, and the design rules ban gradients.
+- **`tailwind-merge` in `cn()`** so a `className` passed to a kit component reliably overrides
+  its defaults (`h-11` then `h-13` resolves to `h-13`).
 - **Compare URLs use slugs** (`/compare?ids=kaveri-university-mysuru,…`) so shared links are
   readable; saved comparisons store college ids so they survive a slug change.
 - **bcryptjs** instead of native `bcrypt`: same algorithm and hash format, no native build step

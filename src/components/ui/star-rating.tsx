@@ -41,6 +41,22 @@ export function StarRating({ value, count, countLabel = "short", size = "md", cl
   );
 }
 
+/** Five stars for a single review's whole-number rating. */
+export function StarRow({ value, className }: { value: number; className?: string }) {
+  return (
+    <span role="img" aria-label={`Rated ${value} out of 5`} className={cn("inline-flex gap-0.5", className)}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          aria-hidden
+          strokeWidth={1.5}
+          className={cn("size-4", star <= value ? "fill-gold text-gold" : "text-ink-muted/50")}
+        />
+      ))}
+    </span>
+  );
+}
+
 type StarRatingInputProps = {
   label: string;
   value: number;

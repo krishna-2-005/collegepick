@@ -34,6 +34,11 @@ export function formatCount(value: number): string {
   return new Intl.NumberFormat("en-IN").format(value);
 }
 
+/** "2026-03-12T…" -> "12 Mar 2026". */
+export function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
+}
+
 /** Rating to one decimal: 4 -> "4.0". */
 export function formatRating(value: number): string {
   return value.toFixed(1);

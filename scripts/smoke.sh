@@ -82,6 +82,23 @@ while [ "$cursor" != "null" ]; do
 done
 if [ "$seen" = "200" ]; then PASS=$((PASS + 1)); echo "  ok    ---  walked 200 rows, no gaps"; else FAIL=$((FAIL + 1)); echo "  FAIL  ---  walked $seen rows, expected 200"; fi
 
+echo "College detail and reviews"
+check "top college" 200 GET "/api/colleges?limit=1"
+SLUG=$(field "b.data[0].slug")
+check "detail by slug" 200 GET "/api/colleges/$SLUG"
+assert "detail has courses, placement and distribution" "b.data.courses.length >= 3 && b.data.placement && b.data.ratingDistribution.reduce((s, n) => s + n, 0) === b.data.ratingCount"
+assert "reviews show first name and initial only" "b.data.reviews.every(r => /^\\S+( [A-Z]\\.)?$/.test(r.author))"
+check "unknown slug" 404 GET "/api/colleges/no-such-college"
+assert "404 envelope" "b.ok === false && b.error.code === 'NOT_FOUND'"
+check "malformed slug" 404 GET "/api/colleges/Bad%20Slug!"
+check "reviews page" 200 GET "/api/colleges/$SLUG/reviews?limit=2"
+assert "reviews newest first" "b.data.length === 2 && b.data[0].createdAt >= b.data[1].createdAt"
+REVIEW_CURSOR=$(field "b.meta.nextCursor")
+check "reviews page 2" 200 GET "/api/colleges/$SLUG/reviews?limit=2&cursor=$REVIEW_CURSOR"
+check "reviews bad limit" 400 GET "/api/colleges/$SLUG/reviews?limit=100"
+check "reviews bad cursor" 400 GET "/api/colleges/$SLUG/reviews?cursor=abc"
+check "reviews unknown college" 404 GET "/api/colleges/no-such-college/reviews"
+
 echo "Filters"
 check "filter options" 200 GET "/api/filters"
 assert "15 states with counts" "b.data.states.length === 15 && b.data.states.every(s => s.count > 0)"

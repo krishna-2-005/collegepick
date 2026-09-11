@@ -1,4 +1,5 @@
 import type { DegreeValue, ExamValue, OwnershipValue } from "@/lib/constants";
+import type { RatingDistribution, ReviewData } from "./review";
 
 /** Everything a CollegeCard, compare avatar or saved row needs. */
 export type CollegeCardData = {
@@ -20,6 +21,36 @@ export type CollegeCardData = {
 };
 
 export type CollegeListMeta = { nextCursor: string | null; total: number };
+
+export type CourseData = {
+  id: string;
+  name: string;
+  degree: DegreeValue;
+  durationYears: number;
+  totalFees: number;
+  seats: number;
+};
+
+export type PlacementData = {
+  avgPackageLPA: number;
+  medianPackageLPA: number;
+  highestPackageLPA: number;
+  placementRate: number;
+  topRecruiters: string[];
+  year: number;
+};
+
+export type CollegeDetail = Omit<CollegeCardData, "avgPackageLPA" | "placementRate"> & {
+  establishedYear: number;
+  overview: string;
+  website: string | null;
+  courses: CourseData[];
+  placement: PlacementData | null;
+  cutoffs: { exam: ExamValue; closingRank: number; year: number }[];
+  ratingDistribution: RatingDistribution;
+  reviews: ReviewData[];
+  reviewsNextCursor: string | null;
+};
 
 export type FilterOptions = {
   states: { value: string; count: number }[];

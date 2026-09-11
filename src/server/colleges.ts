@@ -1,11 +1,19 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
+import { cache } from "react";
 import { badRequest } from "@/lib/api-response";
 import { DEGREE_LABELS, EXAM_LABELS, OWNERSHIP_LABELS, type SortValue } from "@/lib/constants";
 import { decodeCursor, encodeCursor, type Cursor } from "@/lib/cursor";
 import { prisma } from "@/lib/prisma";
 import type { CollegeFilters, CollegeListQuery } from "@/lib/validations/colleges";
-import type { CollegeCardData, CollegeListMeta, FilterOptions } from "@/types/college";
+import type { CollegeCardData, CollegeDetail, CollegeListMeta, FilterOptions } from "@/types/college";
+import { getRatingDistribution, listReviews } from "./reviews";
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function isValidSlug(slug: string): boolean {
+  return slug.length <= 160 && SLUG_PATTERN.test(slug);
+}
 
 export const collegeCardSelect = {
   id: true,
@@ -136,6 +144,64 @@ export async function listColleges(
   const nextCursor = rows.length > limit && last ? encodeCursor({ v: spec.valueOf(last), id: last.id }) : null;
 
   return { items: page.map(toCard), meta: { nextCursor, total } };
+}
+
+/**
+ * Full detail for one college, or null. Wrapped in React `cache` so the page and
+ * its generateMetadata share one query per request.
+ */
+export const getCollegeBySlug = cache(async (slug: string, viewerId?: string): Promise<CollegeDetail | null> => {
+  if (!isValidSlug(slug)) return null;
+
+  const college = await prisma.college.findUnique({
+    where: { slug },
+    select: {
+      ...collegeCardSelect,
+      establishedYear: true,
+      overview: true,
+      website: true,
+      placement: {
+        select: {
+          avgPackageLPA: true,
+          medianPackageLPA: true,
+          highestPackageLPA: true,
+          placementRate: true,
+          topRecruiters: true,
+          year: true,
+        },
+      },
+      courses: {
+        select: { id: true, name: true, degree: true, durationYears: true, totalFees: true, seats: true },
+        orderBy: [{ degree: "asc" }, { name: "asc" }],
+      },
+      examCutoffs: {
+        select: { exam: true, closingRank: true, year: true },
+        orderBy: { exam: "asc" },
+      },
+    },
+  });
+  if (!college) return null;
+
+  const [ratingDistribution, reviews] = await Promise.all([
+    getRatingDistribution(college.id),
+    listReviews(college.id, { viewerId }),
+  ]);
+
+  const { examCutoffs, ...rest } = college;
+  return {
+    ...rest,
+    cutoffs: examCutoffs,
+    ratingDistribution,
+    reviews: reviews.items,
+    reviewsNextCursor: reviews.nextCursor,
+  };
+});
+
+/** Minimal lookup used by write paths (reviews, saves). */
+export async function findCollegeIdBySlug(slug: string): Promise<string | null> {
+  if (!isValidSlug(slug)) return null;
+  const college = await prisma.college.findUnique({ where: { slug }, select: { id: true } });
+  return college?.id ?? null;
 }
 
 export async function getFilterOptions(): Promise<FilterOptions> {

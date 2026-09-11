@@ -1,9 +1,9 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { notFound, ok, parseWith, readJson, route } from "@/lib/api-response";
 import { getSessionUser, requireUser } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { reviewInputSchema, reviewListQuerySchema } from "@/lib/validations/reviews";
-import { findCollegeIdBySlug } from "@/server/colleges";
+import { COLLEGES_TAG, findCollegeIdBySlug } from "@/server/colleges";
 import { createReview, hasReviewed, listReviews } from "@/server/reviews";
 
 type Context = { params: Promise<{ slug: string }> };
@@ -33,8 +33,9 @@ export const POST = route<Context>(async (request, { params }) => {
   const input = parseWith(reviewInputSchema, await readJson(request));
   const collegeId = await collegeIdOr404(slug);
   const result = await createReview(collegeId, user.id, input);
-  // The detail page and listing are cached; refresh the pages that show this rating.
+  // Everything that shows this rating is cached: the college page, home, and list queries.
   revalidatePath(`/colleges/${slug}`);
   revalidatePath("/");
+  revalidateTag(COLLEGES_TAG);
   return ok(result, undefined, { status: 201 });
 });

@@ -1,5 +1,6 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { badRequest, notFound } from "@/lib/api-response";
 import { DEGREE_LABELS, EXAM_LABELS, OWNERSHIP_LABELS, type SortValue } from "@/lib/constants";
@@ -120,7 +121,7 @@ const SORT_SPECS: Record<SortValue, SortSpec> = {
   },
 };
 
-export async function listColleges(
+async function listCollegesUncached(
   query: CollegeListQuery,
 ): Promise<{ items: CollegeCardData[]; meta: CollegeListMeta }> {
   const { cursor: rawCursor, limit, ...filters } = query;
@@ -255,7 +256,7 @@ export async function findCollegeIdBySlug(slug: string): Promise<string | null> 
   return college?.id ?? null;
 }
 
-export async function getFilterOptions(): Promise<FilterOptions> {
+async function getFilterOptionsUncached(): Promise<FilterOptions> {
   const [states, cities, ownerships, courses, exams, fees] = await Promise.all([
     prisma.college.groupBy({ by: ["state"], _count: { _all: true } }),
     prisma.college.groupBy({ by: ["state", "city"], _count: { _all: true } }),
@@ -290,3 +291,22 @@ export async function getFilterOptions(): Promise<FilterOptions> {
     fees: { min: fees._min.minFees ?? 0, max: fees._max.maxFees ?? 0 },
   };
 }
+
+/** Cache tag for everything derived from college rows; reviews invalidate it. */
+export const COLLEGES_TAG = "colleges";
+
+/**
+ * Listing pages cached per exact query for 60s, so popular filters are served without
+ * touching the database. Posting a review calls revalidateTag(COLLEGES_TAG), so a new
+ * rating shows up immediately rather than after the window.
+ */
+export const listColleges = unstable_cache(listCollegesUncached, ["colleges:list"], {
+  revalidate: 60,
+  tags: [COLLEGES_TAG],
+});
+
+/** Filter options only change when colleges change: cache for an hour. */
+export const getFilterOptions = unstable_cache(getFilterOptionsUncached, ["colleges:filters"], {
+  revalidate: 3600,
+  tags: [COLLEGES_TAG],
+});

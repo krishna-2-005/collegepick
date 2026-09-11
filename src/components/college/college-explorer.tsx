@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
 import { useColleges, type InitialCollegePage } from "@/hooks/use-colleges";
 import { useCollegeFilters } from "@/hooks/use-filters";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { ApiClientError } from "@/lib/api-client";
 import { PAGE_SIZE, SORTS, SORT_LABELS, type SortValue } from "@/lib/constants";
 import { formatCount } from "@/lib/format";
@@ -29,6 +30,7 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
   const { filters, setFilters, queryString, activeCount, clearAll } = filterState;
   const query = useColleges(queryString, initial);
   const reduceMotion = useReducedMotion();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // The key of the data on screen: while new filters load, the old list (and its key) stays.
@@ -47,7 +49,8 @@ export function CollegeExplorer({ options, initial }: CollegeExplorerProps) {
     <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
       <aside aria-label="Filters" className="hidden lg:block">
         <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 pb-6">
-          <FilterPanel options={options} state={filterState} />
+          {/* Only built on wide screens: phones use the drawer and never pay to hydrate this. */}
+          {isDesktop ? <FilterPanel options={options} state={filterState} /> : null}
         </div>
       </aside>
 
